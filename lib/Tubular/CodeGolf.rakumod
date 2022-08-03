@@ -1,31 +1,32 @@
-# code-golf-evaluator
-Code Golf competition
-=======
-NAME
-====
+unit class Tubular::CodeGolf;
+
+
+=begin pod
+
+=head1 NAME
 
 Tubular::CodeGolf - Golf code evaluator
 
-SYNOPSIS
-========
+=head1 SYNOPSIS
 
-```raku
+=begin code :lang<raku>
+
 use Tubular::CodeGolf;
-```
 
-DESCRIPTION
-===========
+=end code
+
+=head1 DESCRIPTION
 
 Tubular::CodeGolf is Golf code evaluator.
 
-AUTHOR
-======
+=head1 AUTHOR
 
 cono <q@cono.org.ua>
 
-COPYRIGHT AND LICENSE
-=====================
+=head1 COPYRIGHT AND LICENSE
 
 Copyright 2022 cono
 
 This library is free software; you can redistribute it and/or modify it under the Artistic License 2.0.
+
+=end pod

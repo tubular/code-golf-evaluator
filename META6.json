@@ -1,0 +1,24 @@
+{
+  "authors": [
+    "cono"
+  ],
+  "build-depends": [
+  ],
+  "depends": [
+  ],
+  "description": "Golf code evaluator",
+  "license": "Artistic-2.0",
+  "name": "Tubular::CodeGolf",
+  "perl": "6.d",
+  "provides": {
+    "Tubular::CodeGolf": "lib/Tubular/CodeGolf.rakumod"
+  },
+  "resources": [
+  ],
+  "source-url": "",
+  "tags": [
+  ],
+  "test-depends": [
+  ],
+  "version": "0.0.1"
+}

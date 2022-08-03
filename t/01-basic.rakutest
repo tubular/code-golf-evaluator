@@ -1,0 +1,6 @@
+use Test;
+use Tubular::CodeGolf;
+
+pass "replace me";
+
+done-testing;

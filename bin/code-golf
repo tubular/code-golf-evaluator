@@ -1,0 +1,3 @@
+#! /usr/bin/env rakudo
+
+use Tubular::CodeGolf::CLI;
