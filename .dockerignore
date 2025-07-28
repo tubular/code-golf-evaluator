@@ -1,0 +1,4 @@
+**/.*.sw?
+.precomp
+.git
+lib/.precomp
