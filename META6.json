@@ -11,7 +11,22 @@
   "name": "Tubular::CodeGolf",
   "perl": "6.d",
   "provides": {
-    "Tubular::CodeGolf": "lib/Tubular/CodeGolf.rakumod"
+    "Tubular::CodeGolf": "lib/Tubular/CodeGolf.rakumod",
+    "Tubular::CodeGolf::CLI": "lib/Tubular/CodeGolf/CLI.rakumod",
+    "Tubular::CodeGolf::Conf": "lib/Tubular/CodeGolf/Conf.rakumod",
+    "Tubular::CodeGolf::Entity::DirListMessage": "lib/Tubular/CodeGolf/Entity/DirListMessage.rakumod",
+    "Tubular::CodeGolf::Entity::Listable": "lib/Tubular/CodeGolf/Entity/Listable.rakumod",
+    "Tubular::CodeGolf::Entity::Solution": "lib/Tubular/CodeGolf/Entity/Solution.rakumod",
+    "Tubular::CodeGolf::Entity::Task": "lib/Tubular/CodeGolf/Entity/Task.rakumod",
+    "Tubular::CodeGolf::Entity::TestResult": "lib/Tubular/CodeGolf/Entity/TestResult.rakumod",
+    "Tubular::CodeGolf::Entity::TestSuite": "lib/Tubular/CodeGolf/Entity/TestSuite.rakumod",
+    "Tubular::CodeGolf::Runner": "lib/Tubular/CodeGolf/Runner.rakumod",
+    "Tubular::CodeGolf::Runner::DirList": "lib/Tubular/CodeGolf/Runner/DirList.rakumod",
+    "Tubular::CodeGolf::Runner::EntityTransformer": "lib/Tubular/CodeGolf/Runner/EntityTransformer.rakumod",
+    "Tubular::CodeGolf::Runner::ResultToCSV": "lib/Tubular/CodeGolf/Runner/ResultToCSV.rakumod",
+    "Tubular::CodeGolf::Runner::SolutionExecutor": "lib/Tubular/CodeGolf/Runner/SolutionExecutor.rakumod",
+    "Tubular::CodeGolf::Runner::Unit": "lib/Tubular/CodeGolf/Runner/Unit.rakumod",
+    "Tubular::CodeGolf::Utils::PipeTimeout": "lib/Tubular/CodeGolf/Utils/PipeTimeout.rakumod"
   },
   "resources": [
   ],
