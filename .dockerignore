@@ -1,4 +1,6 @@
 **/.*.sw?
+**/.bsp
+**/.scala-build
 .precomp
 .git
 lib/.precomp

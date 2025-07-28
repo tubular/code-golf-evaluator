@@ -7,3 +7,5 @@ lib/.precomp
 /.idea
 =======
 .*.sw?
+**/.bsp
+**/.scala-build
