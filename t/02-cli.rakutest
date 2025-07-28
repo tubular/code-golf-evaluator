@@ -1,0 +1,50 @@
+use Test;
+
+plan 3;
+
+# Get path to project root from test directory
+my $test-dir = $?FILE.IO.parent;
+my $project-root = $test-dir.parent;
+
+# Output capture class for testing
+class OutputCapture {
+    has $.captured = '';
+    method print($s) { $!captured ~= $s }
+    method say($s) { $!captured ~= $s ~ "\n" }
+    method flush() { }
+}
+
+subtest 'CLI module can be loaded', {
+    plan 1;
+    
+    lives-ok { require Tubular::CodeGolf::CLI }, 'CLI module loads without error';
+};
+
+subtest 'CLI compile command via MAIN', {
+    plan 2;
+
+    use Tubular::CodeGolf::CLI;
+    
+    my $capture = OutputCapture.new;
+    my $*OUT = $capture;
+    
+    lives-ok { MAIN('compile') }, 'compile command executes without error';
+    is $capture.captured.chomp, 'ok', 'compile command outputs "ok"';
+};
+
+subtest 'CLI evaluate command via MAIN', {
+    plan 2;
+    
+    use Tubular::CodeGolf::CLI;
+    
+    # Set up environment to point to test data
+    temp %*ENV<CODEGOLF_PATH> = $project-root.add('t/data').Str;
+    
+    my $capture = OutputCapture.new;
+    my $*OUT = $capture;
+    
+    lives-ok { MAIN('evaluate') }, 'evaluate command executes without error';
+    ok $capture.captured.chars > 0, 'evaluate command produces output';
+};
+
+done-testing;
