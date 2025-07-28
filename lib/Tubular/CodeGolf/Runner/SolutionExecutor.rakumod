@@ -13,6 +13,8 @@ class Tubular::CodeGolf::Runner::SolutionExecutor does Tubular::CodeGolf::Runner
                 );
                 my $pipeline = Tubular::CodeGolf::Utils::PipeTimeout.new(:10hup, :2kill, :@commands);
 
+                # supress diff stderr
+                whenever @commands[*-1].stdout {}
                 whenever $pipeline.start {
                     when .exitcode != 0 {
                         Tubular::CodeGolf::Entity::TestResult.new(:$solution, status => 'wrong').emit;
