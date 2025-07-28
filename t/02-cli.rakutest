@@ -16,7 +16,7 @@ class OutputCapture {
 
 subtest 'CLI module can be loaded', {
     plan 1;
-    
+
     lives-ok { require Tubular::CodeGolf::CLI }, 'CLI module loads without error';
 };
 
@@ -24,25 +24,25 @@ subtest 'CLI compile command via MAIN', {
     plan 2;
 
     use Tubular::CodeGolf::CLI;
-    
+
     my $capture = OutputCapture.new;
     my $*OUT = $capture;
-    
+
     lives-ok { MAIN('compile') }, 'compile command executes without error';
     is $capture.captured.chomp, 'ok', 'compile command outputs "ok"';
 };
 
 subtest 'CLI evaluate command via MAIN', {
     plan 2;
-    
+
     use Tubular::CodeGolf::CLI;
-    
+
     # Set up environment to point to test data
     temp %*ENV<CODEGOLF_PATH> = $project-root.add('t/data').Str;
-    
+
     my $capture = OutputCapture.new;
     my $*OUT = $capture;
-    
+
     lives-ok { MAIN('evaluate') }, 'evaluate command executes without error';
     ok $capture.captured.chars > 0, 'evaluate command produces output';
 };
