@@ -1,0 +1,24 @@
+FROM ubuntu:24.04
+
+RUN apt update && apt-get install -y perl python3 python3-pip git unzip curl zip make build-essential
+
+RUN mkdir -p /app/code-golf
+RUN useradd -d /app -s /bin/bash app && chown -R app:app /app
+WORKDIR /app
+USER app
+
+RUN curl -s "https://get.sdkman.io" | bash
+RUN bash -c "source /app/.sdkman/bin/sdkman-init.sh && sdk install java 22-open && sdk install scala"
+
+# Warm up Scala compilation server by creating and running a simple program
+RUN bash -c "source /app/.sdkman/bin/sdkman-init.sh && echo 'object H extends App {println(\"hello, world\")}' > /tmp/warmup.scala && scala /tmp/warmup.scala && rm /tmp/warmup.scala"
+
+# Install nvm and Node.js LTS
+ENV NVM_DIR="/app/.nvm"
+RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
+RUN bash -c "source $NVM_DIR/nvm.sh && nvm install --lts && nvm use --lts && nvm alias default lts/*"
+
+RUN git clone https://github.com/rakudo/rakudo.git /app/rakudo
+ENV PATH="${PATH}:/app/rakudo/install/bin:/app/rakudo/install/share/perl6/site/bin"
+RUN echo "--gen-moar --backends=moar --make-install" > /app/rakudo/config.default
+RUN cd /app/rakudo && perl Configure.pl
