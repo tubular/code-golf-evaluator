@@ -1,0 +1,261 @@
+#!/usr/bin/env raku
+
+use Test;
+use Tubular::CodeGolf::Utils::CrossSupply;
+
+plan 11;
+
+# Test basic cross product function
+subtest 'Basic cross-product function', {
+    plan 4;
+    
+    my $s1 = Supply.from-list(<a b>);
+    my $s2 = Supply.from-list(<1 2>);
+    
+    my @results;
+    my $cross = cross-product($s1, $s2);
+    
+    react {
+        whenever $cross -> @pair {
+            @results.push: @pair;
+        }
+        whenever Promise.in(0.1) {
+            done;
+        }
+    }
+    
+    is @results.elems, 4, 'Cross product produces correct number of results';
+    ok ('a', '1') ~~ any(@results), 'Contains (a, 1)';
+    ok ('b', '2') ~~ any(@results), 'Contains (b, 2)';
+    ok ('a', '2') ~~ any(@results), 'Contains (a, 2)';
+};
+
+# Test single supply
+subtest 'Single supply', {
+    plan 2;
+    
+    my $s1 = Supply.from-list(<x y z>);
+    my @results;
+    my $cross = cross-product($s1);
+    
+    react {
+        whenever $cross -> $item {
+            @results.push: $item;
+        }
+        whenever Promise.in(0.1) {
+            done;
+        }
+    }
+    
+    is @results.elems, 3, 'Single supply returns all elements';
+    is-deeply @results.sort, <x y z>, 'Single supply preserves elements';
+};
+
+# Test empty supplies
+subtest 'Empty supplies', {
+    plan 1;
+    
+    my @results;
+    my $cross = cross-product();
+    
+    react {
+        whenever $cross -> $item {
+            @results.push: $item;
+        }
+        whenever Promise.in(0.1) {
+            done;
+        }
+    }
+    
+    is @results.elems, 0, 'Empty supply list produces no results';
+};
+
+# Test three supplies
+subtest 'Three supplies cross product', {
+    plan 2;
+    
+    my $s1 = Supply.from-list(<a b>);
+    my $s2 = Supply.from-list(<1 2>);
+    my $s3 = Supply.from-list(<x y>);
+    
+    my @results;
+    my $cross = cross-product($s1, $s2, $s3);
+    
+    react {
+        whenever $cross -> @triplet {
+            @results.push: @triplet;
+        }
+        whenever Promise.in(0.1) {
+            done;
+        }
+    }
+    
+    is @results.elems, 8, 'Three-way cross product produces 2×2×2=8 results';
+    ok ('a', '1', 'x') ~~ any(@results), 'Contains expected triplet (a, 1, x)';
+};
+
+# Test infix X operator with two supplies
+subtest 'Infix X operator - two supplies', {
+    plan 2;
+    
+    my $s1 = Supply.from-list(<foo bar>);
+    my $s2 = Supply.from-list(<1 2>);
+    
+    my @results;
+    my $cross = ($s1 X $s2);
+    
+    react {
+        whenever $cross -> $pair {
+            @results.push: $pair;
+        }
+        whenever Promise.in(0.1) {
+            done;
+        }
+    }
+    
+    is @results.elems, 4, 'Infix X produces correct number of results';
+    ok $('foo', '1') ~~ any(@results), 'Infix X contains expected pair';
+};
+
+# Test timing behavior
+subtest 'Timing behavior', {
+    plan 1;
+    
+    my $s1 = Supply.interval(0.05).head(2);
+    my $s2 = Supply.from-list(<x y>);
+    
+    my @results;
+    my $cross = cross-product($s1, $s2);
+    
+    my $start = now;
+    react {
+        whenever $cross -> @pair {
+            @results.push: @pair;
+        }
+        whenever Promise.in(0.5) {
+            done;
+        }
+    }
+    my $elapsed = now - $start;
+    
+    ok $elapsed >= 0.05, 'Cross product respects timing of input supplies';
+};
+
+# Test with different data types
+subtest 'Different data types', {
+    plan 2;
+    
+    my $s1 = Supply.from-list(1, 2, 3);
+    my $s2 = Supply.from-list('a', 'b');
+    
+    my @results;
+    my $cross = cross-product($s1, $s2);
+    
+    react {
+        whenever $cross -> @pair {
+            @results.push: @pair;
+        }
+        whenever Promise.in(0.1) {
+            done;
+        }
+    }
+    
+    is @results.elems, 6, 'Mixed data types produce correct count';
+    ok (1, 'a') ~~ any(@results), 'Mixed types work correctly';
+};
+
+# Test error conditions
+subtest 'Error handling', {
+    plan 1;
+    
+    # This should not crash
+    my $s1 = Supply.from-list();  # Empty supply
+    my $s2 = Supply.from-list(<a b>);
+    
+    my @results;
+    my $cross = cross-product($s1, $s2);
+    
+    lives-ok {
+        react {
+            whenever $cross -> @pair {
+                @results.push: @pair;
+            }
+            whenever Promise.in(0.1) {
+                done;
+            }
+        }
+    }, 'Empty supply in cross product does not crash';
+};
+
+# Test large cross product
+subtest 'Performance with larger sets', {
+    plan 1;
+    
+    my $s1 = Supply.from-list(1..10);
+    my $s2 = Supply.from-list('a'..'e');
+    
+    my @results;
+    my $cross = cross-product($s1, $s2);
+    
+    react {
+        whenever $cross -> @pair {
+            @results.push: @pair;
+        }
+        whenever Promise.in(0.2) {
+            done;
+        }
+    }
+    
+    is @results.elems, 50, 'Larger cross product (10×5=50) works correctly';
+};
+
+# Test nested cross products
+subtest 'Nested operations', {
+    plan 1;
+    
+    my $s1 = Supply.from-list(<a b>);
+    my $s2 = Supply.from-list(<1 2>);
+    my $s3 = Supply.from-list(<x y>);
+    
+    # Create a cross product of the first two, then cross with third
+    my $intermediate = cross-product($s1, $s2);
+    my $final = cross-product($intermediate, $s3);
+    
+    my @results;
+    react {
+        whenever $final -> @result {
+            @results.push: @result;
+        }
+        whenever Promise.in(0.1) {
+            done;
+        }
+    }
+    
+    is @results.elems, 8, 'Nested cross products work correctly';
+};
+
+# Test infix X operator with three supplies
+subtest 'Infix X operator - three supplies', {
+    plan 2;
+    
+    my $s1 = Supply.from-list(<a b>);
+    my $s2 = Supply.from-list(<1 2>);
+    my $s3 = Supply.from-list(<x y>);
+    
+    my @results;
+    my $cross = ($s1 X $s2 X $s3);
+    
+    react {
+        whenever $cross -> $triplet {
+            @results.push: $triplet;
+        }
+        whenever Promise.in(0.2) {
+            done;
+        }
+    }
+    
+    is @results.elems, 8, 'Three-way infix X produces 2×2×2=8 results';
+    ok $('a', '1', 'x') ~~ any(@results), 'Three-way X contains expected triplet';
+};
+
+done-testing;
