@@ -6,7 +6,7 @@ class Tubular::CodeGolf::Runner::ResultToCSV does Tubular::CodeGolf::Runner::Uni
             "task,author,version,size,language,test,status".emit;
             whenever $in -> $result {
                 (
-                    $result.solution.test-suite.task.name,
+                    $result.solution.task.name,
                     $result.solution.author,
                     $result.solution.version,
                     $result.solution.size,
@@ -17,4 +17,8 @@ class Tubular::CodeGolf::Runner::ResultToCSV does Tubular::CodeGolf::Runner::Uni
             }
         }
     }
+}
+
+sub EXPORT($short_name?) {
+    Map.new: do $short_name => Tubular::CodeGolf::Runner::ResultToCSV if $short_name
 }

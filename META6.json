@@ -26,6 +26,7 @@
     "Tubular::CodeGolf::Runner::ResultToCSV": "lib/Tubular/CodeGolf/Runner/ResultToCSV.rakumod",
     "Tubular::CodeGolf::Runner::SolutionExecutor": "lib/Tubular/CodeGolf/Runner/SolutionExecutor.rakumod",
     "Tubular::CodeGolf::Runner::Unit": "lib/Tubular/CodeGolf/Runner/Unit.rakumod",
+    "Tubular::CodeGolf::Utils::CrossSupply": "lib/Tubular/CodeGolf/Utils/CrossSupply.rakumod",
     "Tubular::CodeGolf::Utils::PipeTimeout": "lib/Tubular/CodeGolf/Utils/PipeTimeout.rakumod"
   },
   "resources": [

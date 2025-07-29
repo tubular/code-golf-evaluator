@@ -33,3 +33,7 @@ class Tubular::CodeGolf::Runner::SolutionExecutor does Tubular::CodeGolf::Runner
         }
     }
 }
+
+sub EXPORT($short_name?) {
+    Map.new: do $short_name => Tubular::CodeGolf::Runner::SolutionExecutor if $short_name
+}

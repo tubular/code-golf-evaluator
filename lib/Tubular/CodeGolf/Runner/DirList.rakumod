@@ -1,4 +1,3 @@
-use Tubular::CodeGolf::Entity::DirListMessage;
 use Tubular::CodeGolf::Entity::Listable;
 use Tubular::CodeGolf::Runner::Unit;
 
@@ -7,16 +6,19 @@ class Tubular::CodeGolf::Runner::DirList does Tubular::CodeGolf::Runner::Unit {
         supply {
             whenever $in -> $item {
                 when $item ~~ Tubular::CodeGolf::Entity::Listable {
-                    my $data = $item.data;
                     my $test = $item.dir-test;
                     whenever $item.dir-path -> $in-path {
-                        Tubular::CodeGolf::Entity::DirListMessage.new(:$data, path => $_).emit for $in-path.IO.dir(:$test);
+                        .emit for $in-path.dir(:$test);
                     }
                 }
                 default {
-                    Tubular::CodeGolf::Entity::DirListMessage.new(:data(), path => $_).emit for $item.IO.dir;
+                    .emit for $item.IO.dir;
                 }
             }
         }
     }
+}
+
+sub EXPORT($short_name?) {
+    Map.new: do $short_name => Tubular::CodeGolf::Runner::DirList if $short_name
 }

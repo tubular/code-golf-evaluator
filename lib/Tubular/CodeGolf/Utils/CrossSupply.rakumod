@@ -1,7 +1,7 @@
 unit module CrossSupply;
 
 #| Recursively builds cross product of supplies
-sub cross-product-recursive($prev, @rest) is export {
+sub cross-product-recursive($prev, @rest) {
     return $prev unless @rest;
 
     my $head = @rest.first;

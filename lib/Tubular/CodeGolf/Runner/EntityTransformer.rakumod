@@ -7,3 +7,7 @@ class Tubular::CodeGolf::Runner::EntityTransformer does Tubular::CodeGolf::Runne
         return $in.map: { $!entity.new($_) };
     }
 }
+
+sub EXPORT($short_name?) {
+    Map.new: do $short_name => Tubular::CodeGolf::Runner::EntityTransformer if $short_name
+}
