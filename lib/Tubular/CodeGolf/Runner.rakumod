@@ -1,29 +1,29 @@
 use Tubular::CodeGolf::Conf;
 use Tubular::CodeGolf::Entity::Solution 'Solution';
-use Tubular::CodeGolf::Entity::TaskPath 'TaskPath';
 use Tubular::CodeGolf::Entity::SolutionPath 'SolutionPath';
+use Tubular::CodeGolf::Entity::TaskPath 'TaskPath';
 use Tubular::CodeGolf::Runner::DirList 'DirList';
 use Tubular::CodeGolf::Runner::EntityTransformer 'EntityTransformer';
+use Tubular::CodeGolf::Runner::Mono 'Mono';
 use Tubular::CodeGolf::Runner::ResultToCSV 'ResultToCSV';
 use Tubular::CodeGolf::Runner::SolutionExecutor 'SolutionExecutor';
-use Tubular::CodeGolf::Runner::CrossProduct 'CrossProduct';
-use Tubular::CodeGolf::Runner::Mono 'Mono';
-use Tubular::CodeGolf::Utils::SupplyChain 'SupplyChain';
+use Tubular::CodeGolf::Runner::Flow::Chain 'Chain';
+use Tubular::CodeGolf::Runner::Flow::CrossProduct 'CrossProduct';
 
 class Tubular::CodeGolf::Runner {
     has Tubular::CodeGolf::Conf $!config is built;
 
     method run() {
-        my $tests-chain = SupplyChain.new(
+        my $tests-chain = Chain.new(
             EntityTransformer.new(:entity(TaskPath)),
             DirList.new,
         );
-        my $solutions-chain = SupplyChain.new(
+        my $solutions-chain = Chain.new(
             EntityTransformer.new(:entity(SolutionPath)),
             DirList.new,
         );
         # Define data pipeline
-        my $result = SupplyChain.new(
+        my $result = Chain.new(
             Mono.new(:value($!config.get('CODEGOLF_PATH'))),
             DirList.new,
             CrossProduct.new(

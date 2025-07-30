@@ -1,7 +1,7 @@
 use Tubular::CodeGolf::Runner::Producer;
 use Tubular::CodeGolf::Runner::Unit;
 
-class Tubular::CodeGolf::Utils::SupplyChain does Tubular::CodeGolf::Runner::Unit {
+class Tubular::CodeGolf::Runner::Flow::Chain does Tubular::CodeGolf::Runner::Unit {
     has @!chain is built;
 
     method new(*@chain) {
@@ -44,5 +44,5 @@ class Tubular::CodeGolf::Utils::SupplyChain does Tubular::CodeGolf::Runner::Unit
 }
 
 sub EXPORT($short_name?) {
-    Map.new: do $short_name => Tubular::CodeGolf::Utils::SupplyChain if $short_name
+    Map.new: do $short_name => Tubular::CodeGolf::Runner::Flow::Chain if $short_name
 }

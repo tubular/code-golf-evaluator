@@ -1,7 +1,7 @@
 use Tubular::CodeGolf::Runner::Unit;
 use Tubular::CodeGolf::Utils::CrossSupply;
 
-class Tubular::CodeGolf::Runner::CrossProduct does Tubular::CodeGolf::Runner::Unit {
+class Tubular::CodeGolf::Runner::Flow::CrossProduct does Tubular::CodeGolf::Runner::Unit {
     has @!chains is built;
 
     method new(*@chains) {
@@ -18,5 +18,5 @@ class Tubular::CodeGolf::Runner::CrossProduct does Tubular::CodeGolf::Runner::Un
 }
 
 sub EXPORT($short_name?) {
-    Map.new: do $short_name => Tubular::CodeGolf::Runner::CrossProduct if $short_name
+    Map.new: do $short_name => Tubular::CodeGolf::Runner::Flow::CrossProduct if $short_name
 }
