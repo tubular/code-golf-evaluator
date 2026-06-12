@@ -1,53 +1,51 @@
 use Test;
+use Tubular::CodeGolf::Runner;
 
-plan 3;
+# CLI's only job is dispatch: map each subcommand to the right Runner.run call.
+# The pipeline itself is covered by t/05 and t/06, so here we mock Runner.run
+# (capture its arguments, don't execute it) and assert what the CLI asks for.
+my @run-calls;
+Tubular::CodeGolf::Runner.^lookup('run').wrap(my method (|c) { @run-calls.push: c });
 
-# Get path to project root from test directory
-my $test-dir = $?FILE.IO.parent;
-my $project-root = $test-dir.parent;
-
-# Output capture class for testing
+# Minimal stdout sink for the one command that prints directly (single-threaded).
 class OutputCapture {
     has $.captured = '';
     method print($s) { $!captured ~= $s }
-    method say($s) { $!captured ~= $s ~ "\n" }
-    method flush() { }
+    method say($s)   { $!captured ~= $s ~ "\n" }
+    method flush()   {}
 }
 
-subtest 'CLI module can be loaded', {
-    plan 1;
-
-    lives-ok { require Tubular::CodeGolf::CLI }, 'CLI module loads without error';
-};
-
-subtest 'CLI compile command via MAIN', {
-    plan 2;
-
+# Import MAIN inside a block so it doesn't land in the mainline (which would
+# make Rakudo auto-run MAIN at program end with the test's args).
+{
     use Tubular::CodeGolf::CLI;
 
-    my $capture = OutputCapture.new;
-    my $*OUT = $capture;
+    subtest 'compile prints "ok" without touching the Runner', {
+        plan 2;
+        @run-calls = ();
+        my $cap = OutputCapture.new;
+        { my $*OUT = $cap; MAIN('compile'); }
+        is $cap.captured.chomp, 'ok', 'outputs "ok"';
+        is @run-calls.elems, 0, 'never runs the pipeline';
+    };
 
-    lives-ok { MAIN('compile') }, 'compile command executes without error';
-    is $capture.captured.chomp, 'ok', 'compile command outputs "ok"';
-};
+    subtest 'evaluate runs the default (CSV) pipeline over everything', {
+        plan 3;
+        @run-calls = ();
+        MAIN('evaluate');
+        is @run-calls.elems, 1, 'Runner.run called once';
+        nok @run-calls[0].hash<task>:exists,   'no task scoping (whole tree)';
+        nok @run-calls[0].hash<format>:exists, 'no format override (defaults to CSV)';
+    };
 
-subtest 'CLI evaluate command', {
-    plan 2;
-
-    # Run as a subprocess and capture its stdout via a pipe. In-process $*OUT
-    # capture is unreliable: the evaluator emits results from throttle worker
-    # threads (see SolutionExecutor), where a dynamic $*OUT override doesn't apply.
-    my %env = %*ENV, CODEGOLF_PATH => $project-root.add('t/data').Str;
-    my $proc = run
-        $*EXECUTABLE, '-I', $project-root.add('lib').Str,
-        $project-root.add('bin').add('code-golf').Str, 'evaluate',
-        :out, :err, :%env;
-    my $out = $proc.out.slurp(:close);
-    $proc.err.slurp(:close);
-
-    is $proc.exitcode, 0, 'evaluate command exits cleanly';
-    ok $out.contains('success'), 'evaluate command produces result output';
-};
+    subtest 'release <tag> renders Markdown scoped to that competition', {
+        plan 3;
+        @run-calls = ();
+        MAIN('release', '000-hello');
+        is @run-calls.elems, 1, 'Runner.run called once';
+        is @run-calls[0].hash<task>,   '000-hello', 'scoped to the tag/competition folder';
+        is @run-calls[0].hash<format>, 'md',        'Markdown output';
+    };
+}
 
 done-testing;
