@@ -25,6 +25,15 @@ performance or polish; optimize for size.
 - **Ranking is by code size in bytes**, smallest wins. The shebang interpreter
   line is free (declaring `#!/usr/bin/env -S perl` costs nothing); your program
   body — including any interpreter flags — is what counts.
+- **Whitespace counts too** — spaces, tabs, and newlines are bytes like any
+  other, so you can't hide logic in "free" whitespace. For a deliberately absurd
+  demonstration, see
+  [`claude-01.pl`](competition/000-hello/solutions/claude-01.pl): its real
+  program lives entirely in the blank-looking lines after `__DATA__`, where each
+  line's *number of spaces* is one character code. The few bytes above
+  `__DATA__` read those lines and rebuild the source with `chr(length)` + `eval`.
+  It runs correctly — and tips the scales at ~1,900 bytes, landing dead last.
+  That's the whole point: if spaces were free, this would look "tiny".
 - **Any language goes**, as long as it's available in the competition Docker
   image (run `make versions` to see what's installed: Perl, Python, Raku,
   Scala/Java, Node.js, sed, bash, …). There's an **overall winner** and a
