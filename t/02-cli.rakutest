@@ -32,19 +32,22 @@ subtest 'CLI compile command via MAIN', {
     is $capture.captured.chomp, 'ok', 'compile command outputs "ok"';
 };
 
-subtest 'CLI evaluate command via MAIN', {
+subtest 'CLI evaluate command', {
     plan 2;
 
-    use Tubular::CodeGolf::CLI;
+    # Run as a subprocess and capture its stdout via a pipe. In-process $*OUT
+    # capture is unreliable: the evaluator emits results from throttle worker
+    # threads (see SolutionExecutor), where a dynamic $*OUT override doesn't apply.
+    my %env = %*ENV, CODEGOLF_PATH => $project-root.add('t/data').Str;
+    my $proc = run
+        $*EXECUTABLE, '-I', $project-root.add('lib').Str,
+        $project-root.add('bin').add('code-golf').Str, 'evaluate',
+        :out, :err, :%env;
+    my $out = $proc.out.slurp(:close);
+    $proc.err.slurp(:close);
 
-    # Set up environment to point to test data
-    temp %*ENV<CODEGOLF_PATH> = $project-root.add('t/data').Str;
-
-    my $capture = OutputCapture.new;
-    my $*OUT = $capture;
-
-    lives-ok { MAIN('evaluate') }, 'evaluate command executes without error';
-    ok $capture.captured.chars > 0, 'evaluate command produces output';
+    is $proc.exitcode, 0, 'evaluate command exits cleanly';
+    ok $out.contains('success'), 'evaluate command produces result output';
 };
 
 done-testing;
