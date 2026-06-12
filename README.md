@@ -69,7 +69,7 @@ Evaluation is literally `cat <name>.in | your-solution | diff - <name>.ex`. If
 
 ### What happens at the deadline
 
-1. The organizer merges every competitor's branch into `master`.
+1. The organizer merges the competition PRs into `master`.
 2. The full, hidden test cases are merged into each task's `tests/`.
 3. The merge commit is **tagged with the task folder name** (e.g. `000-hello`).
 4. That tag triggers a GitHub Action that evaluates every solution against the
@@ -78,10 +78,12 @@ Evaluation is literally `cat <name>.in | your-solution | diff - <name>.ex`. If
 Forgot to merge in time? The organizer can move the tag and the release
 regenerates — but don't count on it.
 
-> ⚠️ **Keep your solution secret until the deadline.** Work in your own branch
-> and **do not merge to `master` early** — anything on `master` is visible to
-> everyone, who can then copy your trick or undercut your byte count. Merge no
-> earlier than the final day before the deadline.
+> 💡 **Submit with a pull request.** Don't merge to `master` yourself — open a PR
+> and the organizer will merge the entries at the deadline. Title it
+> `[<tag>] <your name>` (e.g. `[000-hello] alex`) so the organizer can tell at a
+> glance which PRs are competition entries. And on your honour: please **don't
+> peek at other people's open PRs** until the round is finalized — figuring it
+> out yourself is the whole point, and comparing notes afterwards is half the fun.
 
 ## Competitor workflow
 
@@ -92,7 +94,7 @@ regenerates — but don't count on it.
    cd code-golf-evaluator
    ```
 
-2. **Branch** — keep your work private until the final day:
+2. **Branch** — do your work on your own branch:
 
    ```sh
    git checkout -b golf/<your-name>
@@ -141,8 +143,9 @@ regenerates — but don't count on it.
 7. **Shrink it.** Trim bytes, try another language, repeat. Remember: a correct
    but slow/ugly solution that's shorter beats a fast, pretty, longer one.
 
-8. **Submit close to the deadline** — open a PR (or merge) into `master` no
-   earlier than the final day. The organizer takes it from there.
+8. **Open a pull request** titled `[<tag>] <your name>` (e.g. `[000-hello] alex`).
+   No need to merge it yourself — the organizer merges the entries at the
+   deadline. And please don't peek at others' open PRs until then.
 
 ---
 
