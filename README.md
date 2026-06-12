@@ -30,11 +30,12 @@ performance or polish; optimize for size.
   demonstration, see
   [`claude-01.pl`](competition/000-hello/solutions/claude-01.pl): its real
   program lives entirely in the blank-looking lines after `__DATA__`, where each
-  line's *number of spaces* is one character code. A single line above
-  `__DATA__` reads those lines and rebuilds the source in one expression —
-  `pack "C*", map {chomp; length} <DATA>` — then `eval`s it. It runs correctly —
-  and tips the scales at ~1,900 bytes, landing dead last. That's the whole
-  point: if spaces were free, this would look "tiny".
+  line's *length* is one character code. The single line above `__DATA__` reads
+  those lines and rebuilds the source in one expression —
+  `pack "C*", map {length} <DATA>` — then `eval`s it. It scores **1854 bytes**
+  and lands dead last — yet strip the spaces and the real logic is only **61
+  bytes**. That ~30× gap is the whole point: if spaces were free, this would
+  masquerade as a tiny solution.
 - **Any language goes**, as long as it's available in the competition Docker
   image (run `make versions` to see what's installed: Perl, Python, Raku,
   Scala/Java, Node.js, sed, bash, …). There's an **overall winner** and a
