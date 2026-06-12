@@ -43,6 +43,7 @@ class Tubular::CodeGolf::Runner::ResultToMD does Tubular::CodeGolf::Runner::Unit
                 version  => $s.version,
                 language => $s.language,
                 size     => $s.size,
+                file     => ($s.path.defined ?? $s.path.basename !! Str),
                 statuses => [],
             };
             %sol{$key}<statuses>.push: $r.status;
@@ -64,42 +65,34 @@ class Tubular::CodeGolf::Runner::ResultToMD does Tubular::CodeGolf::Runner::Unit
         @lines.push: "## 🏆 Overall leaderboard";
         @lines.push: "";
         if @valid {
-            @lines.push: "| Rank | Author | Language | Size | Solution |";
-            @lines.push: "|---:|---|---|---:|---|";
-            my $rank = 0;
-            my $prev-size;
-            for @valid.kv -> $i, $s {
-                $rank = $i + 1 if !$prev-size.defined || $s<size> != $prev-size;
-                $prev-size = $s<size>;
-                my $marker = $rank == 1 ?? ' 🏆' !! '';
-                @lines.push: "| {$rank}{$marker} | {$s<author>} | {$s<language>} | {$s<size>} | {$s<author>}-{$s<version>} |";
-            }
+            @lines.append: self!ranked-table(@valid, $folder, :language);
         }
         else {
             @lines.push: "_No valid solutions._";
         }
         @lines.push: "";
 
-        # Per-language winners
+        # Per-language winners — one ranked table per represented language
         @lines.push: "## 🥇 Per-language winners";
         @lines.push: "";
         if @valid {
-            @lines.push: "| Language | Author | Size |";
-            @lines.push: "|---|---|---:|";
-            my %best;
+            my %by-lang;
             for @valid -> $s {
-                my $lang = $s<language>;
-                %best{$lang} = $s if !(%best{$lang}:exists) || $s<size> < %best{$lang}<size>;
+                %by-lang{$s<language>} //= [];
+                %by-lang{$s<language>}.push: $s;
             }
-            for %best.keys.sort -> $lang {
-                my $s = %best{$lang};
-                @lines.push: "| {$lang} | {$s<author>} | {$s<size>} |";
+            # @valid is size-sorted, so each language's list is already too.
+            for %by-lang.keys.sort -> $lang {
+                @lines.push: "### $lang";
+                @lines.push: "";
+                @lines.append: self!ranked-table(%by-lang{$lang}, $folder);
+                @lines.push: "";
             }
         }
         else {
             @lines.push: "_No valid solutions._";
+            @lines.push: "";
         }
-        @lines.push: "";
 
         # Disqualified / failed
         if @failed {
@@ -108,7 +101,7 @@ class Tubular::CodeGolf::Runner::ResultToMD does Tubular::CodeGolf::Runner::Unit
             @lines.push: "| Solution | Language | Status |";
             @lines.push: "|---|---|---|";
             for @failed -> $s {
-                @lines.push: "| {$s<author>}-{$s<version>} | {$s<language>} | {self!worst-status($s<statuses>)} |";
+                @lines.push: "| {self!solution-cell($folder, $s)} | {$s<language>} | {self!worst-status($s<statuses>)} |";
             }
             @lines.push: "";
         }
@@ -116,10 +109,49 @@ class Tubular::CodeGolf::Runner::ResultToMD does Tubular::CodeGolf::Runner::Unit
         return @lines;
     }
 
-    method !task-link(Str $folder) {
+    # A size-ranked table for a list of solution hashes (already sorted by size
+    # ascending). Rank 1 is marked; equal sizes share a rank. With :language the
+    # table includes a Language column (used by the overall board).
+    method !ranked-table(@sols, Str $folder, Bool :$language) {
+        my @lines;
+        @lines.push: $language
+            ?? '| Rank | Author | Language | Size | Solution |'
+            !! '| Rank | Author | Size | Solution |';
+        @lines.push: $language
+            ?? '|---:|---|---|---:|---|'
+            !! '|---:|---|---:|---|';
+        my $rank = 0;
+        my $prev-size;
+        for @sols.kv -> $i, $s {
+            $rank = $i + 1 if !$prev-size.defined || $s<size> != $prev-size;
+            $prev-size = $s<size>;
+            my $marker = $rank == 1 ?? ' 🏆' !! '';
+            my $sol = self!solution-cell($folder, $s);
+            @lines.push: $language
+                ?? "| {$rank}{$marker} | {$s<author>} | {$s<language>} | {$s<size>} | {$sol} |"
+                !! "| {$rank}{$marker} | {$s<author>} | {$s<size>} | {$sol} |";
+        }
+        return @lines;
+    }
+
+    # The Solution cell: a link to the real file when we know its name, else the
+    # plain author-version label.
+    method !solution-cell(Str $folder, $s) {
+        return "{$s<author>}-{$s<version>}" unless $s<file>.defined;
+        # Link text is just author-attempt (no extension); the target is the real file.
+        my $name = $s<file>.subst(/ '.' \w+ $ /, '');
+        return "[{$name}]({self!folder-url($folder)}/solutions/{$s<file>})";
+    }
+
+    # Base URL of a competition folder: absolute when REPO_TREE_URL is set (in
+    # CI), otherwise a repo-relative path (handy for local runs).
+    method !folder-url(Str $folder) {
         my $base = %*ENV<REPO_TREE_URL> // '';
-        my $url = $base ?? "$base/competition/$folder" !! "competition/$folder";
-        return "📖 [Task description & solutions]($url)";
+        return $base ?? "$base/competition/$folder" !! "competition/$folder";
+    }
+
+    method !task-link(Str $folder) {
+        return "📖 [Task description & solutions]({self!folder-url($folder)})";
     }
 
     method !worst-status(@statuses) {

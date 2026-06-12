@@ -9,6 +9,9 @@ DOCKER_DIR = docker
 DOCKERFILE_BASE = $(DOCKER_DIR)/Dockerfile.base
 DOCKERFILE_APP = $(DOCKER_DIR)/Dockerfile
 
+# Competition to render results for (matches the task folder / release tag name)
+COMPETITION ?= 000-hello
+
 # Default target
 .PHONY: all
 all: $(APP_IMAGE)
@@ -75,6 +78,18 @@ evaluate-test: $(APP_IMAGE)
 	@echo "Running evaluate command with test data in Docker container"
 	docker run --rm -e CODEGOLF_PATH=/app/code-golf/t/data $(APP_IMAGE) code-golf evaluate
 
+# Render the Markdown release page locally, exactly as the release workflow does.
+# Override the competition with: make release COMPETITION=000-hello
+# Stdout is the page; redirect it with: make release > release.md
+.PHONY: release
+release: $(APP_IMAGE)
+	@echo "Rendering release page for $(COMPETITION)" >&2
+	docker run --rm \
+		-e GIT_SHA="$$(git rev-parse HEAD)" \
+		-e FINALIZED_AT="$$(date -u +%FT%TZ)" \
+		$(REPO_TREE_URL:%=-e REPO_TREE_URL=%) \
+		$(APP_IMAGE) code-golf release $(COMPETITION)
+
 # Clean up Docker images
 .PHONY: clean
 clean:
@@ -104,6 +119,7 @@ help:
 	@echo "  compile       - Run compile command in container"
 	@echo "  evaluate      - Run evaluate command in container"
 	@echo "  evaluate-test - Run evaluate command with test data in container"
+	@echo "  release       - Render the Markdown release page (COMPETITION=<tag>)"
 	@echo "  clean         - Remove Docker images"
 	@echo "  clean-dangling- Remove dangling Docker images"
 	@echo "  help          - Show this help message"

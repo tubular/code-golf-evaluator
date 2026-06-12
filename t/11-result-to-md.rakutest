@@ -6,9 +6,10 @@ use Tubular::CodeGolf::Runner::ResultToMD 'ResultToMD';
 
 # Build a Solution directly (bypassing the filename/shebang parser) so we can
 # control author/version/language/size for ranking assertions.
-sub sol(:$author, :$version, :$language, :$size, :$task) {
+sub sol(:$author, :$version, :$language, :$size, :$task, :$ext = 'txt') {
     Tubular::CodeGolf::Entity::Solution.new(
         :$task, :$author, :$version, :$language, :$size,
+        :path("{$author}-{$version}.{$ext}".IO),
     );
 }
 
@@ -19,14 +20,14 @@ sub result($solution, $status) {
 my $task = Tubular::CodeGolf::Entity::Task.new(:number<000>, :name<hello>);
 
 # winner: passes both tests, smallest size
-my $sed  = sol(:author<cono>,  :version(4), :language<sed>,  :size(15), :$task);
+my $sed  = sol(:author<cono>,  :version(4), :language<sed>,  :size(15), :$task, :ext<sed>);
 # two solutions tie on size 17 -> both rank 2
-my $perl = sol(:author<cono>,  :version(1), :language<perl>, :size(17), :$task);
-my $raku = sol(:author<alice>, :version(1), :language<raku>, :size(17), :$task);
+my $perl = sol(:author<cono>,  :version(1), :language<perl>, :size(17), :$task, :ext<pl>);
+my $raku = sol(:author<alice>, :version(1), :language<raku>, :size(17), :$task, :ext<raku>);
 # disqualified: one test wrong
-my $bad  = sol(:author<bob>,   :version(1), :language<perl>, :size(9),  :$task);
+my $bad  = sol(:author<bob>,   :version(1), :language<perl>, :size(9),  :$task, :ext<pl>);
 # disqualified: timeout
-my $slow = sol(:author<eve>,   :version(1), :language<python>, :size(8), :$task);
+my $slow = sol(:author<eve>,   :version(1), :language<python>, :size(8), :$task, :ext<py>);
 
 my @results =
     result($sed,  'success'), result($sed,  'success'),
@@ -55,8 +56,21 @@ like $md, /'| 1 🏆 | cono | sed | 15 |'/, 'sed is overall winner with trophy';
 my @rank-rows = $md.lines.grep(/'| 2 |'/);
 is @rank-rows.elems, 2, 'two solutions tie at rank 2';
 
-# Per-language winners section lists one row per language of valid solutions.
+# Per-language winners section renders one ranked table per represented language.
 like $md, /'## 🥇 Per-language winners'/, 'per-language section present';
+my $per-lang = $md.split('## 🥇 Per-language winners').[1].split('## ❌').first;
+like $per-lang, /'### perl'/, 'perl gets its own table';
+like $per-lang, /'### raku'/, 'raku gets its own table';
+like $per-lang, /'### sed'/,  'sed gets its own table';
+nok  $per-lang.contains('### python'), 'unrepresented (disqualified-only) language has no table';
+# Within the perl table, the valid perl solution leads as that language's winner
+# (and the disqualified perl entry, bob, is absent).
+my $perl-tbl = $per-lang.split('### ').first(*.starts-with('perl'));
+like $perl-tbl, /'🏆 | cono'/, 'perl table marks cono as the language winner';
+nok  $perl-tbl.contains('bob'),  'disqualified perl entry absent from perl table';
+
+# Solution cells link to the real file, but the link text drops the extension.
+like $md, /'[cono-4](competition/000-hello/solutions/cono-4.sed)'/, 'link text is author-attempt, target is the real file';
 
 # Disqualified solutions appear with their worst status; valid ones do not.
 like $md, /'## ❌ Disqualified'/, 'disqualified section present';

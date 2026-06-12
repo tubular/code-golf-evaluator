@@ -33,6 +33,11 @@ performance or polish; optimize for size.
   `SIGHUP` after **10s** and `SIGKILL` **2s** later. A solution that exceeds it
   is recorded as `timeout` and does not rank. That's the only nod to
   performance — everything within the budget is fair game.
+- **LLMs are allowed, but please don't.** Using an LLM isn't prohibited, but
+  this is a *fun* competition — you'll get far more out of it (and so will
+  everyone reading the solutions) if you golf it yourself. Even better, reach for
+  a language you don't normally use: `perl`, `raku`, and `sed` are unreasonably
+  good at golf, so picking one up is half the fun.
 
 ### How a task is prepared
 
