@@ -1,5 +1,5 @@
 #!/usr/bin/env -S perl
-eval pack"C*",map length,split"\n",do{local$/;<DATA>};
+eval pack"C*",map{chomp;length}<DATA>;
 __DATA__
                                                                                                                 
                                                                                                                   
