@@ -61,6 +61,9 @@ class Tubular::CodeGolf::Runner::ResultToMD does Tubular::CodeGolf::Runner::Unit
         @lines.push: self!task-link($folder);
         @lines.push: "";
 
+        # Celebrate the absolute winner(s) before the tables.
+        @lines.append: self!winner-banner($folder, @valid);
+
         # Overall leaderboard
         @lines.push: "## 🏆 Overall leaderboard";
         @lines.push: "";
@@ -106,6 +109,25 @@ class Tubular::CodeGolf::Runner::ResultToMD does Tubular::CodeGolf::Runner::Unit
             @lines.push: "";
         }
 
+        return @lines;
+    }
+
+    # A big celebration banner for the absolute winner(s) — the smallest valid
+    # solution(s) overall. Empty when nobody has a passing solution.
+    method !winner-banner(Str $folder, @valid) {
+        return () unless @valid;
+        my $best   = @valid[0]<size>;
+        my @champs = @valid.grep({ .<size> == $best });
+        my $names  = @champs.map(*.<author>).unique.join(' & ');
+        my $word   = @champs.elems > 1 ?? 'CHAMPIONS' !! 'CHAMPION';
+
+        my @lines;
+        @lines.push: "# 🎉🎉🎉 &nbsp; 🏆 $word: $names 🏆 &nbsp; 🎉🎉🎉";
+        @lines.push: "";
+        for @champs -> $c {
+            @lines.push: "## 🥇 {self!solution-cell($folder, $c)} — `{$c<language>}`, just **{$c<size>} bytes**! 🔥🎊";
+        }
+        @lines.push: "";
         return @lines;
     }
 

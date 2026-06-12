@@ -49,6 +49,11 @@ my $md = @out.join("\n");
 like $md, /'# 000-hello'/, 'task heading rendered from folder';
 like $md, /'[Task description & solutions](competition/000-hello)'/, 'task link falls back to relative path';
 
+# Celebration banner for the absolute winner sits before the leaderboard.
+my $before-board = $md.split('## 🏆 Overall leaderboard').first;
+like $before-board, /'CHAMPION: cono'/, 'champion banner names the winner before the board';
+like $before-board, /'15 bytes'/,       'champion banner shows the winning size';
+
 # Winner is the smallest valid solution, marked.
 like $md, /'| 1 🏆 | cono | sed | 15 |'/, 'sed is overall winner with trophy';
 
