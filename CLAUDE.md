@@ -5,9 +5,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Development Commands
 
 ### Testing
-- `prove6 -Ilib t` - Run all tests using Prove6
+- `prove6 -Ilib t` - Run all tests using Prove6 (fast local loop)
+- `prove6 -I. t` - Run tests via the distribution `META6.json` (mirrors CI)
+- `make test` - Build the Docker image and run the suite inside it (CI parity; needed for solutions whose interpreters only exist in the container)
 - `zef install --/test --test-depends --deps-only .` - Install dependencies
 - `zef install --/test App::Prove6` - Install the Prove6 test runner
+
+> **ALWAYS run the tests after changing anything Raku-related** — any edit under
+> `lib/`, `bin/`, or `t/`, or to `META6.json`. Run `prove6 -Ilib t` for the quick
+> loop while iterating, and the full suite must pass before the change is
+> considered done. A change is not complete until tests pass.
+>
+> When you add a new module under `lib/`, you MUST also add it to the `provides`
+> section of `META6.json` — otherwise `prove6 -I.` and `zef`/CI cannot resolve it.
+> Every module with logic should have a matching test in `t/`.
 
 ### Running the Application
 - `./bin/code-golf evaluate` - Main command to evaluate code golf solutions
@@ -56,8 +67,11 @@ competition/
 ```
 
 ### Testing Structure
-- Tests use standard Raku Test module
-- Current test suite is minimal (`t/01-basic.rakutest:4`)
+- Tests use the standard Raku `Test` module; shared fixtures live in `t/data/`
+- Coverage: `Conf` (`t/03`), entities (`t/04`), runner units & flow (`t/05`),
+  `SolutionExecutor`/`PipeTimeout` (`t/06`), `CrossSupply` (`t/10`), `ResultToMD` (`t/11`), CLI (`t/02`)
+- `SolutionExecutor`/`PipeTimeout` tests spawn real processes and need the
+  interpreters present (always true inside the Docker image / `make test`)
 - CI runs on Ubuntu/macOS/Windows via GitHub Actions
 
 ### Dependencies

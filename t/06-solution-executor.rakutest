@@ -1,0 +1,59 @@
+use Test;
+use Tubular::CodeGolf::Utils::PipeTimeout;
+use Tubular::CodeGolf::Runner::SolutionExecutor;
+use Tubular::CodeGolf::Entity::Solution;
+
+my $data = $?FILE.IO.parent.add('data/000-hello');
+
+sub first-of($s, $safety = 15) {
+    my @r;
+    my $p = Promise.new;
+    $s.tap({ @r.push: $_; $p.keep unless $p }, quit => { $p.keep unless $p });
+    await Promise.anyof($p, Promise.in($safety));
+    @r;
+}
+
+# Run a solution file against a named test, return its status.
+sub status-of($solution-file, $test) {
+    my $sol = Tubular::CodeGolf::Entity::Solution.new(
+        ($data.add("tests/$test.in"), $data.add("solutions/$solution-file")),
+    );
+    my @r = first-of(Tubular::CodeGolf::Runner::SolutionExecutor.new.transform(Supply.from-list($sol)));
+    @r ?? @r[0].status !! 'NONE';
+}
+
+plan 5;
+
+subtest 'PipeTimeout completes a fast pipeline successfully', {
+    plan 1;
+    my @cmd = (Proc::Async.new('true'),);
+    my $proc = first-of(Tubular::CodeGolf::Utils::PipeTimeout.new(:5hup, :5kill, :commands(@cmd)).start, 10)[0];
+    is $proc.exitcode, 0, 'last command exit code surfaces as 0';
+};
+
+subtest 'PipeTimeout kills a hung pipeline', {
+    plan 2;
+    my @cmd = (Proc::Async.new('sleep', '30'),);
+    my $start = now;
+    my $proc = first-of(Tubular::CodeGolf::Utils::PipeTimeout.new(:1hup, :1kill, :commands(@cmd)).start, 10)[0];
+    ok now - $start < 8, 'hung pipeline is terminated well before sleep finishes';
+    ok $proc.defined && $proc.signal > 0, 'process reports it was killed by a signal';
+};
+
+subtest 'SolutionExecutor reports success for a correct solution', {
+    plan 1;
+    is status-of('cono-01.pl', 'world'), 'success', 'correct output matches expected';
+};
+
+subtest 'SolutionExecutor reports wrong for incorrect output', {
+    plan 1;
+    is status-of('wrong-01.raku', 'combined'), 'wrong', 'mismatched output is wrong';
+};
+
+subtest 'SolutionExecutor reports timeout for a slow solution', {
+    plan 1;
+    # atimeout-01.sh sleeps far longer than the 10s SIGHUP window.
+    is status-of('atimeout-01.sh', 'world'), 'timeout', 'slow solution is timed out';
+};
+
+done-testing;

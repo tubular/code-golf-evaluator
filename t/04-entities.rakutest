@@ -1,0 +1,85 @@
+use Test;
+use Tubular::CodeGolf::Entity::Task;
+use Tubular::CodeGolf::Entity::TestSuite;
+use Tubular::CodeGolf::Entity::TestResult;
+use Tubular::CodeGolf::Entity::Solution;
+use Tubular::CodeGolf::Entity::SolutionPath;
+use Tubular::CodeGolf::Entity::TaskPath;
+
+my $data = $?FILE.IO.parent.add('data/000-hello');
+
+# Tap a (self-completing) supply and collect everything it emits.
+sub collect($s, $safety = 5) {
+    my @r;
+    my $p = Promise.new;
+    $s.tap({ @r.push: $_ }, done => { $p.keep }, quit => { $p.keep });
+    await Promise.anyof($p, Promise.in($safety));
+    @r;
+}
+
+plan 6;
+
+subtest 'Task parses folder name and round-trips', {
+    plan 4;
+    my $t = Tubular::CodeGolf::Entity::Task.new('000-hello');
+    is $t.number, '000', 'number parsed';
+    is $t.name, 'hello', 'name parsed';
+    is $t.folder, '000-hello', 'folder rebuilt from parts';
+    is Tubular::CodeGolf::Entity::Task.new(:number<007>, :name<bond>).folder,
+        '007-bond', 'folder from named constructor';
+};
+
+subtest 'TestSuite derives test name and file paths', {
+    plan 4;
+    my $ts = Tubular::CodeGolf::Entity::TestSuite.new($data.add('tests/world.in'));
+    is $ts.test, 'world', 'test name from input file basename';
+    is $ts.input-file.basename, 'world.in', 'input-file path';
+    is $ts.expected-file.basename, 'world.ex', 'expected-file path';
+    ok $ts.input-file.e, 'input-file points at a real file';
+};
+
+subtest 'Solution parses filename + shebang from a path tuple', {
+    plan 6;
+    my $sol = Tubular::CodeGolf::Entity::Solution.new(
+        ($data.add('tests/world.in'), $data.add('solutions/cono-01.pl')),
+    );
+    is $sol.author, 'cono', 'author from filename';
+    is $sol.version, 1, 'version from filename';
+    is $sol.language, 'perl', 'language from shebang interpreter';
+    ok $sol.size > 0, 'size excludes shebang but stays positive';
+    is $sol.task.folder, '000-hello', 'task derived from path';
+    is $sol.test-suite.test, 'world', 'test-suite derived from path';
+};
+
+subtest 'TestResult holds solution + status', {
+    plan 2;
+    my $tr = Tubular::CodeGolf::Entity::TestResult.new(
+        :solution(Tubular::CodeGolf::Entity::Solution), :status('success'),
+    );
+    is $tr.status, 'success', 'status accessor';
+    ok $tr.solution ~~ Tubular::CodeGolf::Entity::Solution, 'solution accessor typed';
+};
+
+subtest 'SolutionPath / TaskPath dir-path', {
+    plan 2;
+    my $sp = Tubular::CodeGolf::Entity::SolutionPath.new($data);
+    is collect($sp.dir-path)[0].basename, 'solutions', 'SolutionPath points into solutions/';
+
+    my $tp = Tubular::CodeGolf::Entity::TaskPath.new($data);
+    is collect($tp.dir-path)[0].basename, 'tests', 'TaskPath points into tests/';
+};
+
+subtest 'Listable dir-test predicates', {
+    plan 4;
+    # SolutionPath uses the Listable default (skip dotfiles).
+    my $sp = Tubular::CodeGolf::Entity::SolutionPath.new($data);
+    ok  $sp.dir-test.('cono-01.pl'), 'default predicate keeps normal files';
+    nok $sp.dir-test.('.hidden'),    'default predicate skips dotfiles';
+
+    # TaskPath overrides it to only match *.in inputs.
+    my $tp = Tubular::CodeGolf::Entity::TaskPath.new($data);
+    ok  $tp.dir-test.('world.in'),  'TaskPath predicate matches .in';
+    nok $tp.dir-test.('world.ex'),  'TaskPath predicate rejects .ex';
+};
+
+done-testing;

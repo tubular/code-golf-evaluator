@@ -1,0 +1,18 @@
+use Test;
+
+# Conf is a process-wide singleton: the env override is captured by TWEAK on the
+# first construction, so set the env and build it as the very first thing here.
+%*ENV<TESTS_PATH> = 'custom-tests-dir';
+
+use Tubular::CodeGolf::Conf;
+my $conf = Tubular::CodeGolf::Conf.new;
+
+plan 5;
+
+is $conf.get('TESTS_PATH'), 'custom-tests-dir', 'env var overrides default config value';
+is $conf.get('SOLUTIONS_PATH'), 'solutions', 'unset key keeps its default';
+is $conf.get('CODEGOLF_PATH'), '/app/code-golf/competition', 'default path is present';
+ok Tubular::CodeGolf::Conf.new === $conf, 'new() returns the same singleton instance';
+dies-ok { $conf.get('DOES_NOT_EXIST') }, 'get() dies on an unknown key';
+
+done-testing;

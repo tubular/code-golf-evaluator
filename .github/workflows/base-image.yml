@@ -1,0 +1,31 @@
+name: base-image
+
+# Builds the heavy base image (rakudo, scala/java, node, perl, python) and
+# caches it in GHCR so the per-competition release workflow stays fast.
+# Run manually, or automatically when the base Dockerfile changes.
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+    paths:
+      - 'docker/Dockerfile.base'
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-base:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        run: echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Build and push base image
+        run: |
+          IMAGE="ghcr.io/${{ github.repository_owner }}/code-golf-base:latest"
+          docker build -t "$IMAGE" -f docker/Dockerfile.base .
+          docker push "$IMAGE"

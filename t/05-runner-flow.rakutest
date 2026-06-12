@@ -1,0 +1,109 @@
+use Test;
+use Tubular::CodeGolf::Runner::Mono;
+use Tubular::CodeGolf::Runner::Filter;
+use Tubular::CodeGolf::Runner::EntityTransformer;
+use Tubular::CodeGolf::Runner::DirList;
+use Tubular::CodeGolf::Runner::Flow::Chain;
+use Tubular::CodeGolf::Runner::Flow::CrossProduct;
+use Tubular::CodeGolf::Runner::ResultToCSV;
+use Tubular::CodeGolf::Entity::TaskPath;
+use Tubular::CodeGolf::Entity::Task;
+use Tubular::CodeGolf::Entity::TestSuite;
+use Tubular::CodeGolf::Entity::Solution;
+use Tubular::CodeGolf::Entity::TestResult;
+
+my $data = $?FILE.IO.parent.add('data/000-hello');
+
+sub collect($s, $safety = 5) {
+    my @r;
+    my $p = Promise.new;
+    $s.tap({ @r.push: $_ }, done => { $p.keep }, quit => { $p.keep });
+    await Promise.anyof($p, Promise.in($safety));
+    @r;
+}
+
+# A minimal entity for EntityTransformer / cross-product wiring.
+my class Box { has $.v; multi method new($v) { self.bless(:$v) } }
+
+plan 8;
+
+subtest 'Mono produces its single value', {
+    plan 1;
+    is-deeply collect(Tubular::CodeGolf::Runner::Mono.new(:value('hello')).transform),
+        ['hello'], 'Mono emits exactly its value';
+};
+
+subtest 'Filter keeps only matching items', {
+    plan 1;
+    my $f = Tubular::CodeGolf::Runner::Filter.new(:pred(-> $x { $x %% 2 }));
+    is-deeply collect($f.transform(Supply.from-list(1..6))).sort.List,
+        (2, 4, 6), 'even numbers survive';
+};
+
+subtest 'EntityTransformer maps values into entities', {
+    plan 1;
+    my $et = Tubular::CodeGolf::Runner::EntityTransformer.new(:entity(Box));
+    is-deeply collect($et.transform(Supply.from-list(1, 2, 3))).map(*.v).List,
+        (1, 2, 3), 'each value wrapped via entity.new';
+};
+
+subtest 'DirList lists a plain directory path', {
+    plan 1;
+    my @e = collect(Tubular::CodeGolf::Runner::DirList.new.transform(Supply.from-list($data.Str)));
+    is-deeply @e.map(*.basename).sort.List, ('solutions', 'tests'),
+        'lists immediate children of the directory';
+};
+
+subtest 'DirList honours a Listable dir-test filter', {
+    plan 1;
+    my $tp = Tubular::CodeGolf::Entity::TaskPath.new($data);
+    my @e = collect(Tubular::CodeGolf::Runner::DirList.new.transform(Supply.from-list($tp)));
+    is-deeply @e.map(*.basename).sort.List, ('combined.in', 'world.in'),
+        'only .in inputs pass the TaskPath predicate';
+};
+
+subtest 'Chain wires steps together', {
+    plan 3;
+    # Producer-first chain via .start
+    my $chain = Tubular::CodeGolf::Runner::Flow::Chain.new(
+        Tubular::CodeGolf::Runner::Mono.new(:value('x')),
+        Tubular::CodeGolf::Runner::Filter.new(:pred(-> $v { True })),
+    );
+    is-deeply collect($chain.start), ['x'], '.start runs producer then transforms';
+
+    # Transformer-only chain via .transform
+    my $c2 = Tubular::CodeGolf::Runner::Flow::Chain.new(
+        Tubular::CodeGolf::Runner::Filter.new(:pred(-> $v { $v > 2 })),
+        Tubular::CodeGolf::Runner::EntityTransformer.new(:entity(Box)),
+    );
+    is-deeply collect($c2.transform(Supply.from-list(1, 2, 3, 4))).map(*.v).sort.List,
+        (3, 4), '.transform applies steps in order';
+
+    dies-ok { Tubular::CodeGolf::Runner::Flow::Chain.new.start },
+        'empty chain .start dies';
+};
+
+subtest 'CrossProduct crosses each chain over the input', {
+    plan 1;
+    my class Letters { method transform($in) { Supply.from-list(<a b>) } }
+    my class Nums    { method transform($in) { Supply.from-list(1, 2) } }
+    my $cp = Tubular::CodeGolf::Runner::Flow::CrossProduct.new(Letters.new, Nums.new);
+    my @r = collect($cp.transform(Supply.from-list('seed')), 1);
+    is @r.elems, 4, '2 × 2 = 4 combinations';
+};
+
+subtest 'ResultToCSV emits a header and one row per result', {
+    plan 2;
+    my $task = Tubular::CodeGolf::Entity::Task.new(:number<000>, :name<hello>);
+    my $ts   = Tubular::CodeGolf::Entity::TestSuite.new(:dirname<x>, :test<world>);
+    my $sol  = Tubular::CodeGolf::Entity::Solution.new(
+        :task($task), :test-suite($ts),
+        :author<cono>, :version(1), :language<perl>, :size(17),
+    );
+    my $tr = Tubular::CodeGolf::Entity::TestResult.new(:solution($sol), :status<success>);
+    my @lines = collect(Tubular::CodeGolf::Runner::ResultToCSV.new.transform(Supply.from-list($tr)));
+    is @lines[0], 'task,author,version,size,language,test,status', 'CSV header line';
+    is @lines[1], 'hello,cono,1,17,perl,world,success', 'CSV data row';
+};
+
+done-testing;

@@ -1,0 +1,71 @@
+use Test;
+use Tubular::CodeGolf::Entity::Task;
+use Tubular::CodeGolf::Entity::Solution;
+use Tubular::CodeGolf::Entity::TestResult;
+use Tubular::CodeGolf::Runner::ResultToMD 'ResultToMD';
+
+# Build a Solution directly (bypassing the filename/shebang parser) so we can
+# control author/version/language/size for ranking assertions.
+sub sol(:$author, :$version, :$language, :$size, :$task) {
+    Tubular::CodeGolf::Entity::Solution.new(
+        :$task, :$author, :$version, :$language, :$size,
+    );
+}
+
+sub result($solution, $status) {
+    Tubular::CodeGolf::Entity::TestResult.new(:$solution, :$status);
+}
+
+my $task = Tubular::CodeGolf::Entity::Task.new(:number<000>, :name<hello>);
+
+# winner: passes both tests, smallest size
+my $sed  = sol(:author<cono>,  :version(4), :language<sed>,  :size(15), :$task);
+# two solutions tie on size 17 -> both rank 2
+my $perl = sol(:author<cono>,  :version(1), :language<perl>, :size(17), :$task);
+my $raku = sol(:author<alice>, :version(1), :language<raku>, :size(17), :$task);
+# disqualified: one test wrong
+my $bad  = sol(:author<bob>,   :version(1), :language<perl>, :size(9),  :$task);
+# disqualified: timeout
+my $slow = sol(:author<eve>,   :version(1), :language<python>, :size(8), :$task);
+
+my @results =
+    result($sed,  'success'), result($sed,  'success'),
+    result($perl, 'success'), result($perl, 'success'),
+    result($raku, 'success'), result($raku, 'success'),
+    result($bad,  'success'), result($bad,  'wrong'),
+    result($slow, 'timeout'), result($slow, 'success');
+
+# Drive the transformer and collect emitted markdown lines.
+my @out;
+my $done = Promise.new;
+ResultToMD.new.transform(Supply.from-list(@results)).tap(
+    { @out.push: $_ },
+    done => { $done.keep(True) },
+);
+await Promise.anyof($done, Promise.in(10));
+my $md = @out.join("\n");
+
+like $md, /'# 000-hello'/, 'task heading rendered from folder';
+like $md, /'[Task description & solutions](competition/000-hello)'/, 'task link falls back to relative path';
+
+# Winner is the smallest valid solution, marked.
+like $md, /'| 1 🏆 | cono | sed | 15 |'/, 'sed is overall winner with trophy';
+
+# Equal-size solutions share rank 2 (standard competition ranking).
+my @rank-rows = $md.lines.grep(/'| 2 |'/);
+is @rank-rows.elems, 2, 'two solutions tie at rank 2';
+
+# Per-language winners section lists one row per language of valid solutions.
+like $md, /'## 🥇 Per-language winners'/, 'per-language section present';
+
+# Disqualified solutions appear with their worst status; valid ones do not.
+like $md, /'## ❌ Disqualified'/, 'disqualified section present';
+like $md, /'bob-1' .* 'wrong'/,    'wrong solution disqualified';
+like $md, /'eve-1' .* 'timeout'/,  'timeout solution disqualified';
+# Everything before the disqualified header is the leaderboard + per-language tables;
+# disqualified authors must not appear there.
+my $before-dq = $md.split('## ❌').first;
+unlike $before-dq, /'bob'/, 'disqualified author not in leaderboard';
+unlike $before-dq, /'eve'/, 'timed-out author not in leaderboard';
+
+done-testing;

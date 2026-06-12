@@ -1,0 +1,47 @@
+name: release
+
+# When a competition is finalized, the organizer tags the merge commit with the
+# competition folder name (e.g. `000-hello`). That tag push triggers this job,
+# which evaluates only that competition and publishes/updates a GitHub Release
+# whose body is the Markdown results page. Moving the tag (late merges) re-runs
+# this and updates the existing release in place.
+on:
+  push:
+    tags:
+      - '[0-9][0-9][0-9]-*'   # competition tags like 000-hello
+
+permissions:
+  contents: write   # create / update releases
+  packages: read    # pull the cached base image
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        run: echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Build app image on cached base
+        run: |
+          OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          docker pull "ghcr.io/${OWNER}/code-golf-base:latest"
+          docker tag  "ghcr.io/${OWNER}/code-golf-base:latest" code-golf-base
+          docker build -t code-golf-app -f docker/Dockerfile .
+
+      - name: Render results page
+        run: |
+          docker run --rm \
+            -e GIT_SHA="${{ github.sha }}" \
+            -e FINALIZED_AT="$(date -u +%FT%TZ)" \
+            -e REPO_TREE_URL="${{ github.server_url }}/${{ github.repository }}/tree/${{ github.ref_name }}" \
+            code-golf-app code-golf release "${{ github.ref_name }}" > release.md
+          cat release.md
+
+      - name: Publish / update release
+        uses: softprops/action-gh-release@v2   # updates the release if it already exists -> idempotent on re-tag
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: "Code Golf — ${{ github.ref_name }}"
+          body_path: release.md
