@@ -30,8 +30,9 @@ performance or polish; optimize for size.
   demonstration, see
   [`claude-01.pl`](competition/000-hello/solutions/claude-01.pl): its real
   program lives entirely in the blank-looking lines after `__DATA__`, where each
-  line's *number of spaces* is one character code. The few bytes above
-  `__DATA__` read those lines and rebuild the source with `chr(length)` + `eval`.
+  line's *number of spaces* is one character code. A single line above
+  `__DATA__` slurps the block and rebuilds the source in one expression —
+  `pack "C*", map length, split "\n", do{local $/; <DATA>}` — then `eval`s it.
   It runs correctly — and tips the scales at ~1,900 bytes, landing dead last.
   That's the whole point: if spaces were free, this would look "tiny".
 - **Any language goes**, as long as it's available in the competition Docker
