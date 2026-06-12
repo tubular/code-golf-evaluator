@@ -2,6 +2,9 @@ FROM ubuntu:24.04
 
 RUN apt update && apt-get install -y perl python3 python3-pip git unzip curl zip make build-essential
 
+# Make `python` resolve to python3 (so `#!/usr/bin/env -S python` works).
+RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 1
+
 RUN mkdir -p /app/code-golf
 RUN useradd -d /app -s /bin/bash app && chown -R app:app /app
 WORKDIR /app
