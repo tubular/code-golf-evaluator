@@ -9,11 +9,20 @@ class Tubular::CodeGolf::Runner::Flow::CrossProduct does Tubular::CodeGolf::Runn
     }
 
     method transform(Supply $input --> Supply) {
-        # Transform input through each chain to get individual supplies
-        my @supplies = @!chains.map: { .transform($input) };
-
-        # Create cross product of all supplies using reduce operator
-        return [X] @supplies;
+        # Cross *per incoming item*, not globally. Each item (a competition task
+        # dir) is fed through every chain on its own, so a task's tests are only
+        # crossed with that same task's solutions. Crossing the merged streams
+        # instead would pair every task's tests with every other task's
+        # solutions.
+        supply {
+            whenever $input -> $item {
+                my $one      = Supply.from-list($item);
+                my @supplies = @!chains.map: { .transform($one) };
+                whenever [X] @supplies -> $tuple {
+                    emit $tuple;
+                }
+            }
+        }
     }
 }
 

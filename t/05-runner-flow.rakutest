@@ -25,7 +25,7 @@ sub collect($s, $safety = 5) {
 # A minimal entity for EntityTransformer / cross-product wiring.
 my class Box { has $.v; multi method new($v) { self.bless(:$v) } }
 
-plan 8;
+plan 9;
 
 subtest 'Mono produces its single value', {
     plan 1;
@@ -90,6 +90,19 @@ subtest 'CrossProduct crosses each chain over the input', {
     my $cp = Tubular::CodeGolf::Runner::Flow::CrossProduct.new(Letters.new, Nums.new);
     my @r = collect($cp.transform(Supply.from-list('seed')), 1);
     is @r.elems, 4, '2 × 2 = 4 combinations';
+};
+
+subtest 'CrossProduct crosses each item only with its own siblings', {
+    plan 2;
+    # Two items through two input-dependent chains. A per-item cross gives one
+    # tuple per item (A→A, B→B); a global cross would also pair A with B.
+    my class Tag1 { method transform($in) { $in.map({ $_ ~ '-t' }) } }
+    my class Tag2 { method transform($in) { $in.map({ $_ ~ '-s' }) } }
+    my $cp = Tubular::CodeGolf::Runner::Flow::CrossProduct.new(Tag1.new, Tag2.new);
+    my @r = collect($cp.transform(Supply.from-list('A', 'B')), 1);
+    is @r.elems, 2, 'one tuple per input item — no cross-item pairing';
+    is @r.grep({ .head.substr(0, 1) eq .tail.substr(0, 1) }).elems, @r.elems,
+        'each tuple pairs an item only with itself';
 };
 
 subtest 'ResultToCSV emits a header and one row per result', {
