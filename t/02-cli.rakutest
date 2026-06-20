@@ -1,11 +1,11 @@
 use Test;
-use Tubular::CodeGolf::Runner;
+use Tubular::CodeGolf::Evaluator;
 
-# CLI's only job is dispatch: map each subcommand to the right Runner.run call.
-# The pipeline itself is covered by t/05 and t/06, so here we mock Runner.run
+# CLI's only job is dispatch: map each subcommand to the right Evaluator.run call.
+# The pipeline itself is covered by t/05 and t/06, so here we mock Evaluator.run
 # (capture its arguments, don't execute it) and assert what the CLI asks for.
 my @run-calls;
-Tubular::CodeGolf::Runner.^lookup('run').wrap(my method (|c) { @run-calls.push: c });
+Tubular::CodeGolf::Evaluator.^lookup('run').wrap(my method (|c) { @run-calls.push: c });
 
 # Minimal stdout sink for the one command that prints directly (single-threaded).
 class OutputCapture {
@@ -20,7 +20,7 @@ class OutputCapture {
 {
     use Tubular::CodeGolf::CLI;
 
-    subtest 'compile prints "ok" without touching the Runner', {
+    subtest 'compile prints "ok" without touching the Evaluator', {
         plan 2;
         @run-calls = ();
         my $cap = OutputCapture.new;
@@ -33,7 +33,7 @@ class OutputCapture {
         plan 3;
         @run-calls = ();
         MAIN('evaluate');
-        is @run-calls.elems, 1, 'Runner.run called once';
+        is @run-calls.elems, 1, 'Evaluator.run called once';
         nok @run-calls[0].hash<task>:exists,   'no task scoping (whole tree)';
         nok @run-calls[0].hash<format>:exists, 'no format override (defaults to CSV)';
     };
@@ -42,7 +42,7 @@ class OutputCapture {
         plan 3;
         @run-calls = ();
         MAIN('release', '000-hello');
-        is @run-calls.elems, 1, 'Runner.run called once';
+        is @run-calls.elems, 1, 'Evaluator.run called once';
         is @run-calls[0].hash<task>,   '000-hello', 'scoped to the tag/competition folder';
         is @run-calls[0].hash<format>, 'md',        'Markdown output';
     };

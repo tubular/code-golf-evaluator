@@ -12,6 +12,9 @@ DOCKERFILE_APP = $(DOCKER_DIR)/Dockerfile
 # Competition to render results for (matches the task folder / release tag name)
 COMPETITION ?= 000-hello
 
+# Number of leaderboard entries the `watch` target shows
+COUNT ?= 3
+
 # Default target
 .PHONY: all
 all: $(APP_IMAGE)
@@ -78,6 +81,15 @@ evaluate-test: $(APP_IMAGE)
 	@echo "Running evaluate command with test data in Docker container"
 	docker run --rm -e CODEGOLF_PATH=/app/code-golf/t/data $(APP_IMAGE) code-golf evaluate
 
+# Live golf board: re-test a task's solutions on every save and show the COUNT
+# smallest as OK/NOT OK + byte size. Runs locally (not in Docker) since it
+# watches the files you're editing. TASK defaults to the latest competition
+# folder. Usage: make watch [TASK=002-tictactoe] [COUNT=3]
+CODEGOLF_PATH ?= competition
+.PHONY: watch
+watch:
+	CODEGOLF_PATH="$(CODEGOLF_PATH)" raku -Ilib bin/code-golf -c="$(COUNT)" watch "$(TASK)"
+
 # Render the Markdown release page locally, exactly as the release workflow does.
 # Override the competition with: make release COMPETITION=000-hello
 # Stdout is the page; redirect it with: make release > release.md
@@ -119,6 +131,7 @@ help:
 	@echo "  compile       - Run compile command in container"
 	@echo "  evaluate      - Run evaluate command in container"
 	@echo "  evaluate-test - Run evaluate command with test data in container"
+	@echo "  watch         - Live golf board, re-test on save (TASK=<task> [COUNT=3])"
 	@echo "  release       - Render the Markdown release page (COMPETITION=<tag>)"
 	@echo "  clean         - Remove Docker images"
 	@echo "  clean-dangling- Remove dangling Docker images"

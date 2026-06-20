@@ -1,0 +1,89 @@
+use Test;
+use Tubular::CodeGolf::Runner::Collect;
+use Tubular::CodeGolf::Runner::ResultToTUI;
+use Tubular::CodeGolf::Runner::EntityTransformer;
+
+plan 7;
+
+# Drain a finite supply to a list (waiting for completion).
+sub drain($s, $safety = 5) {
+    my @r;
+    my $done = Promise.new;
+    $s.tap({ @r.push: $_ }, done => { $done.keep }, quit => { $done.keep });
+    await Promise.anyof($done, Promise.in($safety));
+    @r;
+}
+
+# ResultToTUI.render is pure: aggregated rows -> board lines.
+my $tui = Tubular::CodeGolf::Runner::ResultToTUI.new(:count(3));
+
+my @rows =
+    %( file => 'cono-01.raku', folder => '002-tictactoe', language => 'raku', size => 150, status => 'success', test => Str,       diff => '' ),
+    %( file => 'cono-02.raku', folder => '002-tictactoe', language => 'raku', size => 142, status => 'success', test => Str,       diff => '' ),
+    %( file => 'cono-03.raku', folder => '002-tictactoe', language => 'raku', size => 128, status => 'wrong',   test => 'example', diff => "< XW\n> OW\n" ),
+    %( file => 'cono-04.raku', folder => '002-tictactoe', language => 'raku', size => 160, status => 'timeout', test => 'example', diff => '' ),
+;
+
+subtest 'orders by size ascending and honours the count limit', {
+    plan 2;
+    my $body = $tui.render(@rows).join("\n");
+    ok $body.contains('cono-03.raku') && $body.contains('cono-02.raku') && $body.contains('cono-01.raku'),
+        'top 3 smallest are shown';
+    nok $body.contains('cono-04.raku'), 'the 4th-smallest is dropped by count=3';
+};
+
+subtest 'trophy marks the smallest passing solution, not the smallest overall', {
+    plan 2;
+    my @lines = $tui.render(@rows);
+    my $cup = @lines.first(*.contains('🏆'));
+    ok $cup.defined && $cup.contains('cono-02.raku'), 'trophy is on cono-02';
+    nok @lines.grep(*.contains('cono-03.raku')).first(*.contains('🏆')),
+        'the smaller-but-wrong solution gets no trophy';
+};
+
+subtest 'shows status labels and the first diff under a failure', {
+    plan 3;
+    my $body = $tui.render(@rows).join("\n");
+    ok $body.contains('✓ OK'),    'passing solutions are marked OK';
+    ok $body.contains('✗ WRONG'), 'failing solution is marked WRONG';
+    ok $body.contains('< XW') && $body.contains('> OW'), 'first diff lines are shown';
+};
+
+subtest 'titles the board with the task folder', {
+    plan 1;
+    ok $tui.render(@rows).join("\n").contains('002-tictactoe'), 'header names the task';
+};
+
+subtest 'empty board renders a placeholder', {
+    plan 1;
+    ok $tui.render([]).join("\n").contains('no solutions'), 'placeholder when nothing to show';
+};
+
+subtest 'EntityTransformer :skip-errors drops items whose construction throws', {
+    plan 1;
+    # An entity whose constructor throws on the bad value but builds on good ones.
+    my class Picky {
+        has $.v;
+        method new($v) {
+            die 'nope' if $v < 0;
+            self.bless(:$v);
+        }
+    }
+    my $t = Tubular::CodeGolf::Runner::EntityTransformer.new(:entity(Picky), :skip-errors);
+    my @out;
+    my $done = Promise.new;
+    $t.transform(Supply.from-list(1, -1, 2)).tap({ @out.push: $_ }, done => { $done.keep });
+    await Promise.anyof($done, Promise.in(5));
+    is @out.elems, 2, 'the throwing item (-1) is skipped, the other two pass';
+};
+
+subtest 'Collect folds the whole set on completion', {
+    plan 2;
+    my $c = Tubular::CodeGolf::Runner::Collect.new(fold => -> @x { @x.sort.tail });
+    is drain($c.transform(Supply.from-list(3, 1, 2))), (3,), 'sorts the set and emits the max';
+
+    my $top2 = Tubular::CodeGolf::Runner::Collect.new(fold => -> @x { @x.sort.reverse.head(2) });
+    is drain($top2.transform(Supply.from-list(5, 1, 9, 3))), (9, 5), 'can emit a top-N slice';
+};
+
+done-testing;

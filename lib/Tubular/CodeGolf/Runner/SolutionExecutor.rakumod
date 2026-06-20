@@ -11,16 +11,24 @@ class Tubular::CodeGolf::Runner::SolutionExecutor does Tubular::CodeGolf::Runner
     # SOLUTION_CONCURRENCY.
     has Int $.concurrency = (%*ENV<SOLUTION_CONCURRENCY> // ($*KERNEL.cpu-cores min 16)).Int;
 
+    # When True the diff runs without -q and its stdout is kept on the
+    # TestResult, so consumers (the watcher's live board) can show what differs.
+    # Default False: the CSV/MD evaluator only needs the pass/fail status.
+    has Bool $.capture-output = False;
+
     method transform(Supply $in --> Supply) {
         supply {
             # throttle runs the callable on a worker thread, at most
             # $!concurrency at a time, emitting a Promise (kept with the
             # callable's return value) as each finishes.
             whenever $in.throttle: $!concurrency, -> $solution {
+                my $diff-cmd = $!capture-output
+                    ?? Proc::Async.new('diff', '-', $solution.test-suite.expected-file)
+                    !! Proc::Async.new('diff', '-q', '-', $solution.test-suite.expected-file);
                 my @commands = (
                     Proc::Async.new('cat', $solution.test-suite.input-file),
                     Proc::Async.new($solution.path),
-                    Proc::Async.new('diff', '-q', '-', $solution.test-suite.expected-file),
+                    $diff-cmd,
                 );
                 my $pipeline = Tubular::CodeGolf::Utils::PipeTimeout.new(:10hup, :2kill, :@commands);
 
@@ -28,9 +36,10 @@ class Tubular::CodeGolf::Runner::SolutionExecutor does Tubular::CodeGolf::Runner
                 # slot until it returns. Our pipeline is async, so block this
                 # worker thread on a react that runs it to completion.
                 my $status;
+                my $output = '';
                 react {
-                    # suppress diff stdout
-                    whenever @commands[*-1].stdout {}
+                    # drain diff stdout (and keep it when capturing)
+                    whenever @commands[*-1].stdout { $output ~= $_ }
                     whenever $pipeline.start {
                         given $_ {
                             when .exitcode != 0        { $status = 'wrong' }
@@ -41,7 +50,8 @@ class Tubular::CodeGolf::Runner::SolutionExecutor does Tubular::CodeGolf::Runner
                         done;
                     }
                 }
-                Tubular::CodeGolf::Entity::TestResult.new(:$solution, :$status);
+                my $diff = $!capture-output ?? $output !! Str;
+                Tubular::CodeGolf::Entity::TestResult.new(:$solution, :$status, :$diff);
             } -> $done {
                 whenever $done -> $result { $result.emit }
             }

@@ -12,7 +12,7 @@ use Tubular::CodeGolf::Runner::SolutionExecutor 'SolutionExecutor';
 use Tubular::CodeGolf::Runner::Flow::Chain 'Chain';
 use Tubular::CodeGolf::Runner::Flow::CrossProduct 'CrossProduct';
 
-class Tubular::CodeGolf::Runner {
+class Tubular::CodeGolf::Evaluator {
     has Tubular::CodeGolf::Conf $!config is built;
 
     method run(Str :$task, Str :$format = 'csv') {

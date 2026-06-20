@@ -13,16 +13,18 @@ sub first-of($s, $safety = 15) {
     @r;
 }
 
-# Run a solution file against a named test, return its status.
-sub status-of($solution-file, $test) {
+# Run a solution file against a named test, return its TestResult.
+sub result-of($solution-file, $test, *%opts) {
     my $sol = Tubular::CodeGolf::Entity::Solution.new(
         ($data.add("tests/$test.in"), $data.add("solutions/$solution-file")),
     );
-    my @r = first-of(Tubular::CodeGolf::Runner::SolutionExecutor.new.transform(Supply.from-list($sol)));
-    @r ?? @r[0].status !! 'NONE';
+    my @r = first-of(Tubular::CodeGolf::Runner::SolutionExecutor.new(|%opts).transform(Supply.from-list($sol)));
+    @r ?? @r[0] !! Nil;
 }
 
-plan 5;
+sub status-of($solution-file, $test) { (result-of($solution-file, $test) // Nil).?status // 'NONE' }
+
+plan 7;
 
 subtest 'PipeTimeout completes a fast pipeline successfully', {
     plan 1;
@@ -54,6 +56,20 @@ subtest 'SolutionExecutor reports timeout for a slow solution', {
     plan 1;
     # atimeout-01.sh sleeps far longer than the 10s SIGHUP window.
     is status-of('atimeout-01.sh', 'world'), 'timeout', 'slow solution is timed out';
+};
+
+subtest 'without :capture-output the diff is left empty', {
+    plan 2;
+    my $r = result-of('wrong-01.raku', 'combined');
+    is $r.status, 'wrong', 'still classified as wrong';
+    nok $r.diff, 'no diff captured by default';
+};
+
+subtest ':capture-output keeps the diff for a failing solution', {
+    plan 2;
+    my $r = result-of('wrong-01.raku', 'combined', :capture-output);
+    is $r.status, 'wrong', 'classified as wrong';
+    ok $r.diff && $r.diff.chars > 0, 'diff output is captured';
 };
 
 done-testing;

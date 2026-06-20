@@ -28,8 +28,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a **Raku-based code golf evaluator** that processes programming contest solutions in various languages. The system uses a pipeline architecture with reactive streams (Supply/Supply transformers).
 
+### Evaluation modes
+Two top-level entry points, both consuming the `Runner/` pipeline units:
+- **`Tubular::CodeGolf::Evaluator`** — batch mode; evaluates the whole tree (or one
+  task) and renders CSV/Markdown. Driven by `code-golf evaluate` / `release`.
+- **`Tubular::CodeGolf::Watcher`** — interactive mode; watches a task's `solutions/`
+  and redraws a live leaderboard on every save. Driven by `code-golf watch`.
+
 ### Core Pipeline Flow
-The main evaluation pipeline (`Tubular::CodeGolf::Runner:13-35`) processes data through these transformers:
+The batch pipeline (`Tubular::CodeGolf::Evaluator`) processes data through these transformers:
 1. **DirList** - Lists directories/files
 2. **EntityTransformer** - Converts paths to Task/TestSuite/Solution entities  
 3. **SolutionExecutor** - Runs solution against test cases
