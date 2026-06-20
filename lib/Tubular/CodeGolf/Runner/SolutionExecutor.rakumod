@@ -35,6 +35,14 @@ class Tubular::CodeGolf::Runner::SolutionExecutor does Tubular::CodeGolf::Runner
                 # throttle's callable is synchronous: it holds the concurrency
                 # slot until it returns. Our pipeline is async, so block this
                 # worker thread on a react that runs it to completion.
+                #
+                # Don't `done` the instant the process Promise fires: that tears
+                # the react (and the stdout tap) down before the diff output has
+                # drained and before the proc result has settled — a race that
+                # surfaced as a captured-empty diff and a bogus exitcode on CI.
+                # Instead let the react end on its own once BOTH whenevers
+                # complete: the stdout supply at EOF, and $pipeline.start after it
+                # emits the final proc (PipeTimeout closes its own supply).
                 my $status;
                 my $output = '';
                 react {
@@ -47,7 +55,6 @@ class Tubular::CodeGolf::Runner::SolutionExecutor does Tubular::CodeGolf::Runner
                             when .signal > 0           { $status = 'error' }
                             default                    { $status = 'success' }
                         }
-                        done;
                     }
                 }
                 my $diff = $!capture-output ?? $output !! Str;
