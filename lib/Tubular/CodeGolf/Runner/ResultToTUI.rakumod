@@ -4,7 +4,7 @@ use Tubular::CodeGolf::Runner::Unit;
 #| the watcher's counterpart to ResultToCSV / ResultToMD. It keeps the latest
 #| result per (solution, test), and on each settle emits a full-screen frame:
 #| the N smallest solutions as OK/NOT OK + byte size, 🏆 on the smallest passing
-#| one, and the first diff under anything that fails.
+#| one.
 class Tubular::CodeGolf::Runner::ResultToTUI does Tubular::CodeGolf::Runner::Unit {
     has Int  $.count is built = 3;
     # Quiet window (seconds) after a burst of results before redrawing.
@@ -37,27 +37,22 @@ class Tubular::CodeGolf::Runner::ResultToTUI does Tubular::CodeGolf::Runner::Uni
             size     => $s.size,
             tests    => {},
         };
-        %model{$key}<tests>{$s.test-suite.test} = {
-            status => $result.status,
-            diff   => ($result.diff // ''),
-        };
+        %model{$key}<tests>{$s.test-suite.test} = $result.status;
     }
 
     # Aggregate the model to one row per solution. Solutions whose file no longer
     # exists (deleted/renamed between rounds) are pruned here. A solution passes
-    # only if all its tests pass; otherwise the first failing test is shown.
+    # only if all its tests pass; otherwise the first failing status is shown.
     method !rows(%model) {
         %model.values.grep({ .<path>.e }).map(-> %m {
             my @tests = %m<tests>.keys.sort;
-            my $fail  = @tests.first({ %m<tests>{$_}<status> ne 'success' });
+            my $fail  = @tests.first({ %m<tests>{$_} ne 'success' });
             %(
                 file     => %m<file>,
                 folder   => %m<folder>,
                 language => %m<language>,
                 size     => %m<size>,
-                status   => $fail ?? %m<tests>{$fail}<status> !! 'success',
-                test     => $fail // Str,
-                diff     => $fail ?? %m<tests>{$fail}<diff> !! '',
+                status   => $fail ?? %m<tests>{$fail} !! 'success',
             )
         }).List;
     }
@@ -69,8 +64,7 @@ class Tubular::CodeGolf::Runner::ResultToTUI does Tubular::CodeGolf::Runner::Uni
             ~ "\n\nupdated {DateTime.now.hh-mm-ss}\n";
     }
 
-    # Pure: aggregated rows -> board lines. The smallest *passing* solution gets
-    # 🏆; failing rows show the failing test and first diff lines.
+    # Pure: aggregated rows -> board lines. The smallest *passing* solution gets 🏆.
     method render(@rows) {
         my $folder = (@rows ?? @rows[0]<folder> !! '') || 'golf board';
         my @lines;
@@ -97,13 +91,6 @@ class Tubular::CodeGolf::Runner::ResultToTUI does Tubular::CodeGolf::Runner::Uni
             @lines.push: sprintf('%d %s %s %5d  %-16s %s',
                 $i + 1, $cup, %label{$r<status>} // "? $r<status>",
                 $r<size>, $r<file>, $r<language>);
-
-            if $r<status> ne 'success' {
-                @lines.push: "       ↳ {$r<test>}: got / expected" if $r<test>;
-                for ($r<diff> // '').lines.head(6) -> $d {
-                    @lines.push: "       $d";
-                }
-            }
         }
         @lines;
     }

@@ -57,7 +57,7 @@ class Tubular::CodeGolf::Watcher {
             DirWatch.new,
             CrossProduct.new($tests-chain, $solutions-chain),
             EntityTransformer.new(:entity(Solution), :skip-errors),
-            SolutionExecutor.new(:capture-output),
+            SolutionExecutor.new,
             ResultToTUI.new(:$!count),
         );
 

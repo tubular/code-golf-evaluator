@@ -18,10 +18,10 @@ sub drain($s, $safety = 5) {
 my $tui = Tubular::CodeGolf::Runner::ResultToTUI.new(:count(3));
 
 my @rows =
-    %( file => 'cono-01.raku', folder => '002-tictactoe', language => 'raku', size => 150, status => 'success', test => Str,       diff => '' ),
-    %( file => 'cono-02.raku', folder => '002-tictactoe', language => 'raku', size => 142, status => 'success', test => Str,       diff => '' ),
-    %( file => 'cono-03.raku', folder => '002-tictactoe', language => 'raku', size => 128, status => 'wrong',   test => 'example', diff => "< XW\n> OW\n" ),
-    %( file => 'cono-04.raku', folder => '002-tictactoe', language => 'raku', size => 160, status => 'timeout', test => 'example', diff => '' ),
+    %( file => 'cono-01.raku', folder => '002-tictactoe', language => 'raku', size => 150, status => 'success' ),
+    %( file => 'cono-02.raku', folder => '002-tictactoe', language => 'raku', size => 142, status => 'success' ),
+    %( file => 'cono-03.raku', folder => '002-tictactoe', language => 'raku', size => 128, status => 'wrong'   ),
+    %( file => 'cono-04.raku', folder => '002-tictactoe', language => 'raku', size => 160, status => 'timeout' ),
 ;
 
 subtest 'orders by size ascending and honours the count limit', {
@@ -41,12 +41,12 @@ subtest 'trophy marks the smallest passing solution, not the smallest overall', 
         'the smaller-but-wrong solution gets no trophy';
 };
 
-subtest 'shows status labels and the first diff under a failure', {
-    plan 3;
+subtest 'shows OK / NOT OK status labels', {
+    plan 2;
+    # cono-04 (timeout, 160) is outside the top 3, so only OK and WRONG show.
     my $body = $tui.render(@rows).join("\n");
     ok $body.contains('✓ OK'),    'passing solutions are marked OK';
-    ok $body.contains('✗ WRONG'), 'failing solution is marked WRONG';
-    ok $body.contains('< XW') && $body.contains('> OW'), 'first diff lines are shown';
+    ok $body.contains('✗ WRONG'), 'wrong solution is marked WRONG';
 };
 
 subtest 'titles the board with the task folder', {
