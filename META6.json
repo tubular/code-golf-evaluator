@@ -7,7 +7,7 @@
   "depends": [
   ],
   "description": "Golf code evaluator",
-  "license": "Artistic-2.0",
+  "license": "Apache-2.0",
   "name": "Tubular::CodeGolf",
   "perl": "6.d",
   "provides": {

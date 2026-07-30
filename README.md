@@ -266,7 +266,10 @@ cono <q@cono.org.ua>
 COPYRIGHT AND LICENSE
 =====================
 
-Copyright 2022 cono
+Copyright 2022-2026 Chartbeat, Inc.
 
-This library is free software; you can redistribute it and/or modify it under the Artistic License 2.0.
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use
+this file except in compliance with the License. You may obtain a copy of the
+License at <http://www.apache.org/licenses/LICENSE-2.0>. See the [`LICENSE`](LICENSE)
+file for the full text.
 
